@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Gig Clock" />
+    <title>Gig Clock</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: #000;
+        color: #fff;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+
+      main {
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6vh;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+          env(safe-area-inset-left);
+      }
+
+      #time {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+        font-size: min(34vw, 55vh);
+      }
+
+      #time.long {
+        font-size: min(24vw, 45vh);
+      }
+
+      #time.ended {
+        color: #777;
+      }
+
+      button {
+        font: inherit;
+        font-weight: 700;
+        color: #000;
+        background: #fff;
+        border: 0;
+        border-radius: 24px;
+        cursor: pointer;
+      }
+
+      #start {
+        width: min(85vw, 700px);
+        height: min(40vh, 320px);
+        font-size: min(14vw, 12vh);
+      }
+
+      #end {
+        position: relative;
+        overflow: hidden;
+        width: min(70vw, 500px);
+        padding: 3vh 0;
+        font-size: min(6vw, 5vh);
+        color: #fff;
+        background: #222;
+      }
+
+      #end .fill {
+        position: absolute;
+        inset: 0;
+        background: #b00;
+        transform: scaleX(0);
+        transform-origin: left;
+      }
+
+      #end.holding .fill {
+        transform: scaleX(1);
+        transition: transform var(--hold-ms) linear;
+      }
+
+      #end .label {
+        position: relative;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div id="time" hidden>0:00</div>
+      <button id="start" type="button">Start Set</button>
+      <button id="end" type="button" hidden>
+        <span class="fill"></span>
+        <span class="label">Hold to End Set</span>
+      </button>
+    </main>
+
+    <script type="module">
+      import { formatElapsed, msUntilNextTick } from "./clock.js";
+
+      const STORAGE_KEY = "gig-clock:startedAt";
+      const HOLD_MS = 1500;
+
+      const timeEl = document.getElementById("time");
+      const startBtn = document.getElementById("start");
+      const endBtn = document.getElementById("end");
+      endBtn.style.setProperty("--hold-ms", `${HOLD_MS}ms`);
+
+      let startedAt = null;
+      let tickTimer = null;
+      let wakeLock = null;
+
+      function readSaved() {
+        try {
+          const value = Number(localStorage.getItem(STORAGE_KEY));
+          return value > 0 ? value : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function save(value) {
+        try {
+          if (value === null) {
+            localStorage.removeItem(STORAGE_KEY);
+          } else {
+            localStorage.setItem(STORAGE_KEY, String(value));
+          }
+        } catch {}
+      }
+
+      async function keepScreenOn() {
+        try {
+          if ("wakeLock" in navigator && startedAt !== null && !wakeLock) {
+            wakeLock = await navigator.wakeLock.request("screen");
+            wakeLock.addEventListener("release", () => (wakeLock = null));
+          }
+        } catch {}
+      }
+
+      function letScreenSleep() {
+        wakeLock?.release().catch(() => {});
+        wakeLock = null;
+      }
+
+      function render(elapsed) {
+        const text = formatElapsed(elapsed);
+        timeEl.textContent = text;
+        timeEl.classList.toggle("long", text.length > 5);
+      }
+
+      function tick() {
+        const elapsed = Date.now() - startedAt;
+        render(elapsed);
+        tickTimer = setTimeout(tick, msUntilNextTick(elapsed));
+      }
+
+      function startSet(at = Date.now()) {
+        startedAt = at;
+        save(at);
+        timeEl.classList.remove("ended");
+        timeEl.hidden = false;
+        startBtn.hidden = true;
+        endBtn.hidden = false;
+        clearTimeout(tickTimer);
+        tick();
+        keepScreenOn();
+      }
+
+      function endSet() {
+        clearTimeout(tickTimer);
+        render(Date.now() - startedAt);
+        startedAt = null;
+        save(null);
+        letScreenSleep();
+        timeEl.classList.add("ended");
+        endBtn.hidden = true;
+        startBtn.hidden = false;
+      }
+
+      startBtn.addEventListener("click", () => startSet());
+
+      let holdTimer = null;
+
+      function cancelHold() {
+        clearTimeout(holdTimer);
+        endBtn.classList.remove("holding");
+      }
+
+      endBtn.addEventListener("pointerdown", (event) => {
+        endBtn.setPointerCapture(event.pointerId);
+        endBtn.classList.add("holding");
+        holdTimer = setTimeout(() => {
+          cancelHold();
+          endSet();
+        }, HOLD_MS);
+      });
+      endBtn.addEventListener("pointerup", cancelHold);
+      endBtn.addEventListener("pointercancel", cancelHold);
+      endBtn.addEventListener("contextmenu", (event) => event.preventDefault());
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && startedAt !== null) {
+          clearTimeout(tickTimer);
+          tick();
+          keepScreenOn();
+        }
+      });
+
+      const saved = readSaved();
+      if (saved !== null) {
+        startSet(saved);
+      }
+    </script>
+  </body>
+</html>
