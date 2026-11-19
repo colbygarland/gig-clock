@@ -9,6 +9,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Gig Clock" />
     <title>Gig Clock</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon.png" type="image/png" sizes="64x64" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="preload" href="fonts/DSEG7Classic-Bold.woff2" as="font" type="font/woff2" crossorigin />
     <style>
       @font-face {
@@ -37,15 +40,21 @@
         touch-action: manipulation;
       }
 
-      main {
+      body {
+        display: flex;
         height: 100dvh;
+      }
+
+      main {
+        flex: 1;
+        min-width: 0;
+        container-type: size;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 6vh;
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
-          env(safe-area-inset-left);
+        padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
 
       #time {
@@ -55,11 +64,35 @@
         line-height: 1;
         letter-spacing: -0.02em;
         white-space: nowrap;
-        font-size: min(27vw, 55vh);
+        font-size: min(27cqw, 55cqh);
+        opacity: var(--digit-brightness, 1);
       }
 
       #time.long {
-        font-size: min(21vw, 45vh);
+        font-size: min(21cqw, 45cqh);
+      }
+
+      .brightness {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4vh;
+        padding: 0 max(12px, env(safe-area-inset-right)) 0 0;
+      }
+
+      .brightness button {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        font-size: 32px;
+        line-height: 1;
+        color: #888;
+        background: #1a1a1a;
+      }
+
+      .brightness button:disabled {
+        opacity: 0.35;
+        cursor: default;
       }
 
       #time.ended {
@@ -77,17 +110,17 @@
       }
 
       #start {
-        width: min(85vw, 700px);
-        height: min(40vh, 320px);
-        font-size: min(14vw, 12vh);
+        width: min(88cqw, 700px);
+        height: min(40cqh, 320px);
+        font-size: min(14cqw, 12cqh);
       }
 
       #end {
         position: relative;
         overflow: hidden;
-        width: min(70vw, 500px);
+        width: min(75cqw, 500px);
         padding: 3vh 0;
-        font-size: min(6vw, 5vh);
+        font-size: min(6.5cqw, 5cqh);
         color: #fff;
         background: #222;
       }
@@ -123,9 +156,48 @@
         <span class="label">Hold to End Set</span>
       </button>
     </main>
+    <aside class="brightness">
+      <button id="brighter" type="button" aria-label="Brighter numbers">+</button>
+      <button id="dimmer" type="button" aria-label="Dimmer numbers">−</button>
+    </aside>
 
     <script type="module">
-      import { formatElapsed, msUntilNextTick } from "./clock.js";
+      import { BRIGHTNESS_LEVELS, formatElapsed, msUntilNextTick, stepBrightness } from "./clock.js";
+
+      const BRIGHTNESS_KEY = "gig-clock:brightness";
+      const brighterBtn = document.getElementById("brighter");
+      const dimmerBtn = document.getElementById("dimmer");
+
+      let brightnessIndex = (() => {
+        try {
+          const raw = localStorage.getItem(BRIGHTNESS_KEY);
+          return stepBrightness(raw === null ? NaN : Number(raw), 0);
+        } catch {
+          return stepBrightness(NaN, 0);
+        }
+      })();
+
+      function applyBrightness() {
+        document.documentElement.style.setProperty(
+          "--digit-brightness",
+          String(BRIGHTNESS_LEVELS[brightnessIndex]),
+        );
+        brighterBtn.disabled = brightnessIndex === BRIGHTNESS_LEVELS.length - 1;
+        dimmerBtn.disabled = brightnessIndex === 0;
+        try {
+          localStorage.setItem(BRIGHTNESS_KEY, String(brightnessIndex));
+        } catch {}
+      }
+
+      brighterBtn.addEventListener("click", () => {
+        brightnessIndex = stepBrightness(brightnessIndex, 1);
+        applyBrightness();
+      });
+      dimmerBtn.addEventListener("click", () => {
+        brightnessIndex = stepBrightness(brightnessIndex, -1);
+        applyBrightness();
+      });
+      applyBrightness();
 
       const STORAGE_KEY = "gig-clock:startedAt";
       const HOLD_MS = 1500;

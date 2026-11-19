@@ -16,6 +16,16 @@ export function formatElapsed(ms) {
   return `${minutes}:${ss}`;
 }
 
+/** Digit brightness steps, dimmest first. The last one is full white. */
+export const BRIGHTNESS_LEVELS = [0.1, 0.2, 0.35, 0.5, 0.7, 0.85, 1];
+
+/** Move `delta` steps from `index`, staying within the levels. Bad input falls back to full white. */
+export function stepBrightness(index, delta) {
+  const last = BRIGHTNESS_LEVELS.length - 1;
+  const start = Number.isInteger(index) && index >= 0 && index <= last ? index : last;
+  return Math.min(last, Math.max(0, start + delta));
+}
+
 /** Milliseconds until the next whole second of elapsed time. */
 export function msUntilNextTick(ms) {
   return 1000 - (Math.max(0, ms) % 1000);
