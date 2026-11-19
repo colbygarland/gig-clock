@@ -9,7 +9,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Gig Clock" />
     <title>Gig Clock</title>
+    <link rel="preload" href="fonts/DSEG7Classic-Bold.woff2" as="font" type="font/woff2" crossorigin />
     <style>
+      @font-face {
+        font-family: "DSEG7 Classic";
+        src: url("fonts/DSEG7Classic-Bold.woff2") format("woff2");
+        font-weight: 700;
+        font-display: block;
+      }
+
       * {
         box-sizing: border-box;
         margin: 0;
@@ -41,16 +49,17 @@
       }
 
       #time {
+        font-family: "DSEG7 Classic", ui-monospace, monospace;
         font-variant-numeric: tabular-nums;
         font-weight: 700;
         line-height: 1;
         letter-spacing: -0.02em;
         white-space: nowrap;
-        font-size: min(34vw, 55vh);
+        font-size: min(27vw, 55vh);
       }
 
       #time.long {
-        font-size: min(24vw, 45vh);
+        font-size: min(21vw, 45vh);
       }
 
       #time.ended {
