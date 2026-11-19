@@ -284,19 +284,26 @@
         startBtn.hidden = false;
       }
 
-      function goFullScreen() {
+      /**
+       * Full screen, then turn sideways. Browsers only lock the rotation of a
+       * full-screen page, and iPhone Safari supports neither, so both steps
+       * fail quietly.
+       */
+      async function goFullScreenLandscape() {
         const root = document.documentElement;
         const request = root.requestFullscreen ?? root.webkitRequestFullscreen;
-        if (!request || document.fullscreenElement || document.webkitFullscreenElement) {
-          return;
-        }
         try {
-          Promise.resolve(request.call(root, { navigationUI: "hide" })).catch(() => {});
+          if (request && !document.fullscreenElement && !document.webkitFullscreenElement) {
+            await request.call(root, { navigationUI: "hide" });
+          }
+        } catch {}
+        try {
+          await screen.orientation?.lock?.("landscape");
         } catch {}
       }
 
       startBtn.addEventListener("click", () => {
-        goFullScreen();
+        goFullScreenLandscape();
         startSet();
       });
 

@@ -2,7 +2,7 @@
 
 A one-button set timer for gigs. Tap **Start Set** and a big white clock counts up on a black screen. Hold **End Set** for 1.5 seconds to stop it.
 
-- Goes full screen on Start Set (Android and desktop). iPhone Safari can't do this for web pages, so on iPhone use Share → Add to Home Screen and open it from there.
+- Goes full screen on Start Set and, on Android, turns the screen sideways. iPhone Safari can't do this for web pages, so on iPhone use Share → Add to Home Screen and open it from there.
 - **+ / −** buttons on the right brighten or dim the digits for dark stages. The setting is remembered.
 - Keeps the phone screen awake while a set runs (where the browser supports it).
 - Survives a refresh or a locked phone: the start time lives in the browser, so the clock picks up where it was.
